@@ -166,11 +166,37 @@ firewall zone.
       nmcli connection modify $internal-nic connection.zone internal
       nmcli connection modify $public-nic connection.zone public
 
+You may also need to ensure that the connections will autoconnect on reboot:
+
+      nmcli con modify $internal-nic connection.autoconnect=yes
+      nmcli con modify $public-nic connection.autoconnect=yes
+
+(replace enp0s3 with each of your interfaces! The host-only and internal network 
+interfaces are the most likely to have this turned off by default.)
+
+Connecting to your headnode
+---------------------------
+
+Instead of using the VirtualBox terminal, it's often much simpler to ssh in to the headnode
+from your native local terminal - which allows for copy-pasting, window history, etc. 
+
+Check the address of the host-only network using the ```ip addr``` command on the
+headnode - usually in the ```192.168.56.0/24``` by default.
+
+From your host machine, open a terminal emulator, and you should be able to ssh in as 
+root (using the password you set during install - running ```ssh-copy-id root@$headnode_ip```
+is also quite useful, if you're on a Linux host machine.).
+
+Follow the guide below from your local terminal, rather than the VirtualBox terminal.
+(primarily for ease of use)
 
 Installation of the XCBC Tools and Dependencies
 -----------------------------------------------
 
+####Please note - this is meant to be run as the root user!
+
 0\. ```yum install git vim bash-completion```
+
 Git is necessary for getting the
 playbooks; vim and bash-completion are just nice add-ons. Install your
 editor of choice!
@@ -233,10 +259,7 @@ Separated by category, the full list of parameters is:
 -   ```openhpc_release_rpm: "https://github.com/openhpc/ohpc/releases/download/v1.3.GA/ohpc-release-1.3-1.el7.x86_64.rpm"```
 
     This contains the version number and path
-    of the current openhpc release rpm. Older versions are listed and
-    commented out. generate the list of these via
-
-        curl -s https://github.com/openhpc/ohpc/releases/ | grep rpm | grep -v sles | grep -v strong | sed 's/.*="\(.*\)".*".*".*/\1/'
+    of the current openhpc release rpm. 
 
 #### Headnode Information
 -   ```public_interface: enp0s3 ```
@@ -336,11 +359,11 @@ Do not worry! If you don't have GPU or login nodes, space and time will not
 be wasted making unnecessary images.
 
 -   ```compute_chroot_loc: "/opt/ohpc/admin/images/{{ compute_chroot }}"```
--   ```compute_chroot: centos7.3-compute```
+-   ```compute_chroot: centos7-compute```
 -   ```gpu_chroot_loc: "/opt/ohpc/admin/images/{{ gpu_chroot }}"```
--   ```gpu_chroot: centos7.3-gpu```
+-   ```gpu_chroot: centos7-gpu```
 -   ```login_chroot_loc: "/opt/ohpc/admin/images/{{ login_chroot }}"```
--   ```login_chroot: centos7.3-login```
+-   ```login_chroot: centos7-login```
 
 #### Node Inventory Method
 -   ```node_inventory_auto: true```
@@ -381,6 +404,20 @@ be wasted making unnecessary images.
    describing the number and types of GPU available on that node. These
    parameters will be inserted into the slurm.conf. The gpu_type is completely custom, and is the
    string that users must request to run on these nodes in the default SLURM configuration.
+
+Ansible Inventory
+-----------------
+
+Note the inventory file in
+```CRI_XCBC/inventory```:
+```
+[headnode]
+headnode ansible_host="{{ headnode_private_ip }}" ansible_connection=ssh ansible_ssh_user=root
+```
+
+Make sure that the hostname of your headnode matches the entry on that line! Either
+edit the inventory file, or change the hostname via:
+```hostnamectl set-hostname headnode```.
 
 Configuration of the Headnode via Ansible
 -----------------------------------------
